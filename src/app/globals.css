@@ -1,0 +1,59 @@
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-color: #f4ece4;
+  --text-main: #1a1a1a;
+  --accent-red: #d34b32;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  margin: 0;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+}
+
+.font-serif { font-family: 'Playfair Display', serif; }
+.font-handwriting { font-family: 'Caveat', cursive; }
+.font-sans { font-family: 'Inter', sans-serif; }
+.font-mono { font-family: 'JetBrains Mono', monospace; }
+
+/* Noise Overlay */
+.bg-noise {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.4;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+/* Soft Animated Gradient Mesh */
+.gradient-mesh {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.5;
+  background: radial-gradient(circle at 15% 50%, rgba(227, 199, 186, 0.4), transparent 50%),
+              radial-gradient(circle at 85% 30%, rgba(211, 75, 50, 0.05), transparent 50%);
+  filter: blur(60px);
+  animation: meshPulse 15s ease-in-out infinite alternate;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.cursor-blink { animation: blink 1s step-end infinite; }
+
+@keyframes meshPulse {
+  0% { transform: scale(1) translate(0, 0); }
+  50% { transform: scale(1.05) translate(2%, 2%); }
+  100% { transform: scale(1) translate(-2%, -2%); }
+}

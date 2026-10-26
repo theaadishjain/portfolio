@@ -10,8 +10,10 @@ import TerminalContact from '@/components/TerminalContact';
 
 export default function Home() {
   useEffect(() => {
-    // Force scroll to top on initial mount as a safeguard against browser auto-scroll behaviors
-    window.scrollTo(0, 0);
+    // Safeguard against the browser restoring a previous scroll position.
+    // Skipped when the URL carries a hash, otherwise this would cancel the
+    // jump to that section -- which is how the project pages link back here.
+    if (!window.location.hash) window.scrollTo(0, 0);
   }, []);
 
   return (

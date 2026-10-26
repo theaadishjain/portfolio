@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion, useReducedMotion } from 'framer-motion';
 import { GitBranch, ExternalLink, ArrowRight } from 'lucide-react';
 import type { Project } from '@/lib/data';
@@ -12,12 +14,15 @@ interface ProjectCardProps {
 export default function ProjectCard({ project }: ProjectCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const prefersReducedMotion = useReducedMotion();
+  const router = useRouter();
+  const href = `/projects/${project.slug}`;
 
   const handleInteraction = (type: 'enter' | 'leave' | 'click') => {
     const isTouch = window.matchMedia('(hover: none)').matches;
     if (type === 'enter' && !isTouch) setIsHovered(true);
     if (type === 'leave' && !isTouch) setIsHovered(false);
     if (type === 'click' && isTouch) setIsHovered(!isHovered);
+    if (type === 'click' && !isTouch) router.push(href);
   };
 
   const animTransition = prefersReducedMotion
@@ -51,6 +56,10 @@ export default function ProjectCard({ project }: ProjectCardProps) {
       onMouseEnter={() => handleInteraction('enter')}
       onMouseLeave={() => handleInteraction('leave')}
       onClick={() => handleInteraction('click')}
+      onFocus={() => setIsHovered(true)}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsHovered(false);
+      }}
     >
       {/* Background Image */}
       <motion.img
@@ -67,12 +76,12 @@ export default function ProjectCard({ project }: ProjectCardProps) {
           {project.category}
         </div>
         <div className={`flex gap-2 pointer-events-auto transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
-          {project.githubUrl && project.githubUrl !== '#' && (
+          {project.githubUrl && (
             <a href={project.githubUrl} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="p-1.5 rounded-full bg-black/40 backdrop-blur-md hover:bg-black/80 text-white transition-colors border border-white/10">
               <GitBranch size={14} />
             </a>
           )}
-          {project.liveUrl && project.liveUrl !== '#' && (
+          {project.liveUrl && (
             <a href={project.liveUrl} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="p-1.5 rounded-full bg-black/40 backdrop-blur-md hover:bg-black/80 text-white transition-colors border border-white/10">
               <ExternalLink size={14} />
             </a>
@@ -116,23 +125,15 @@ export default function ProjectCard({ project }: ProjectCardProps) {
           </motion.div>
 
           <motion.div variants={itemVariants} className="mt-1">
-            {!project.githubUrl && !project.liveUrl ? (
-              <span
-                className="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-semibold border border-white/10 bg-white/5 text-white/30 cursor-default select-none tracking-wider uppercase"
-              >
-                Repo coming soon
-              </span>
-            ) : (
-              <a
-                href={project.liveUrl || project.githubUrl || "#"}
-                onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs md:text-sm font-medium transition-all group/btn"
-                style={{ color: project.color, border: `1px solid ${project.color}` }}
-              >
-                Check it out
-                <ArrowRight size={13} className="transition-transform group-hover/btn:translate-x-1" />
-              </a>
-            )}
+            <Link
+              href={href}
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs md:text-sm font-medium transition-all group/btn"
+              style={{ color: project.color, border: `1px solid ${project.color}` }}
+            >
+              Read the case file
+              <ArrowRight size={13} className="transition-transform group-hover/btn:translate-x-1" />
+            </Link>
           </motion.div>
         </motion.div>
       </motion.div>

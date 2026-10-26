@@ -1,4 +1,4 @@
-import { Layers, Server, Box, Code2, Cpu, Network, Zap, Globe, Database, Shield, Sparkles, Brain, Search, Cloud, RefreshCw, Key, Eye } from 'lucide-react';
+import { Layers, Server, Box, Code2, Cpu, Network, Zap, Globe, Database, Shield, Sparkles, Brain, Search, Key, Eye } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface Skill {
@@ -14,6 +14,7 @@ export interface TechItem {
 
 export interface Project {
   id: number;
+  slug: string;
   title: string;
   category: string;
   color: string;
@@ -89,11 +90,12 @@ export const SKILLS_DATA: Skill[] = [
 export const PROJECT_DATA: Project[] = [
   {
     id: 1,
+    slug: "athena",
     title: "Athena",
     category: "AI",
     color: "#a855f7",
     image: "/images/project-atlas.jpg",
-    description: "Multi-agent academic assistant — solo-built, six specialized agents, JWT-protected SSE streaming",
+    description: "Multi-agent academic assistant — six specialists behind one chat box, with memory that outlives the session",
     tech: [
       { name: "LangGraph", icon: Network },
       { name: "FastAPI", icon: Zap },
@@ -103,52 +105,59 @@ export const PROJECT_DATA: Project[] = [
       { name: "Gemini", icon: Sparkles }
     ],
     githubUrl: "https://github.com/theaadishjain/Athena",
-    liveUrl: null
+    liveUrl: "https://athena-lemon-five.vercel.app"
   },
   {
     id: 2,
+    slug: "f1gpt",
     title: "F1GPT",
     category: "AI",
     color: "#ef4444",
     image: "/images/project-f1gpt.png",
-    description: "Next.js-based AI chatbot answering F1 racing queries",
+    description: "Retrieval-augmented F1 chatbot built on scraped race data and embeddings that cost nothing to generate",
     tech: [
       { name: "Next.js", icon: Globe },
-      { name: "OpenAI/LLM API", icon: Brain },
-      { name: "RAG", icon: Search }
+      { name: "Gemini", icon: Sparkles },
+      { name: "LangChain", icon: Brain },
+      { name: "Astra DB", icon: Database },
+      { name: "Transformers.js", icon: Cpu },
+      { name: "Puppeteer", icon: Search }
     ],
     githubUrl: "https://github.com/theaadishjain/nextjs-f1chatbot",
-    liveUrl: null
+    liveUrl: "https://f1gpt-five.vercel.app"
   },
   {
     id: 3,
+    slug: "stayease",
     title: "StayEase",
     category: "Web",
     color: "#3b82f6",
     image: "/images/project-stayease.png",
-    description: "Full-stack booking platform deployed on AWS with CI/CD",
+    description: "Server-rendered stay-listing platform — Express 5, nested reviews, and error handling that never leaks a stack trace",
     tech: [
-      { name: "React", icon: Code2 },
-      { name: "Node.js", icon: Server },
+      { name: "Express 5", icon: Server },
+      { name: "EJS", icon: Code2 },
+      { name: "Mongoose", icon: Database },
       { name: "MongoDB", icon: Database },
-      { name: "AWS EC2", icon: Cloud },
-      { name: "Docker", icon: Box },
-      { name: "CI/CD", icon: RefreshCw }
+      { name: "Joi", icon: Shield }
     ],
     githubUrl: "https://github.com/theaadishjain/StayEase",
     liveUrl: null
   },
   {
     id: 4,
+    slug: "she-guardian",
     title: "She-Guardian",
     category: "Web",
     color: "#ec4899",
     image: "/images/project-sheguardian.png",
-    description: "Safety-focused web app with JWT-secured auth",
+    description: "Safety companion that classifies threat level first and asks permission before it ever shares your location",
     tech: [
       { name: "FastAPI", icon: Zap },
       { name: "React", icon: Code2 },
-      { name: "SQLite", icon: Database },
+      { name: "Gemini", icon: Sparkles },
+      { name: "Twilio", icon: Network },
+      { name: "SQLAlchemy", icon: Database },
       { name: "JWT", icon: Key }
     ],
     githubUrl: "https://github.com/theaadishjain/she-guardian",
@@ -156,11 +165,12 @@ export const PROJECT_DATA: Project[] = [
   },
   {
     id: 5,
+    slug: "diabetic-foot-ulcer-detection",
     title: "Diabetic Foot Ulcer Detection",
     category: "AI",
     color: "#8b5cf6",
     image: "/images/project-dfu.jpg",
-    description: "Siamese Network + Spatial Transformer Network thermal imaging classifier, AUROC 0.94",
+    description: "Thermal-image classifier pairing a Siamese network with a spatial transformer — AUROC 0.94, paper under review",
     tech: [
       { name: "PyTorch", icon: Cpu },
       { name: "STN", icon: Box },

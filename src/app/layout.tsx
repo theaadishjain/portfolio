@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  // Absolute base for Open Graph / Twitter image URLs. Set
+  // NEXT_PUBLIC_SITE_URL on the host so shared links resolve to the real
+  // domain instead of localhost.
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
   title: "Aadish Jain — Portfolio",
   description:
     "Computer Science undergraduate at SRM Institute of Science and Technology, specializing in Deep Learning and Agentic AI workflows.",

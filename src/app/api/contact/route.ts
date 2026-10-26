@@ -1,141 +1,139 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// In-memory store for verification codes (TTL: 10 minutes)
-const codeStore = new Map<string, { code: string; message: string; expires: number }>();
+const MAX_MESSAGE = 5000;
+const MAX_EMAIL = 254; // RFC 5321 maximum
 
-function generateCode(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
+// Deliberately strict, and no \r or \n can survive it — the address is placed
+// into mail headers (From display name, Reply-To), where a newline would let a
+// sender inject headers of their own.
+const EMAIL_RE = /^[^\s@<>"'\\]{1,64}@[^\s@<>"'\\.]+(\.[^\s@<>"'\\.]+)+$/;
 
-function cleanExpired() {
+// Best-effort abuse brake. A serverless deploy runs several instances and each
+// keeps its own copy, so this is a speed bump rather than a guarantee — the
+// real ceiling is the Resend account quota. It is not used for correctness:
+// nothing about delivering a message depends on this surviving.
+const RATE_LIMIT = 5;
+const RATE_WINDOW = 10 * 60 * 1000; // 10 minutes
+const hits = new Map<string, number[]>();
+
+function rateLimited(ip: string): boolean {
   const now = Date.now();
-  Array.from(codeStore.entries()).forEach(([key, val]) => {
-    if (val.expires < now) codeStore.delete(key);
-  });
+  const recent = (hits.get(ip) ?? []).filter((t) => now - t < RATE_WINDOW);
+  if (recent.length >= RATE_LIMIT) {
+    hits.set(ip, recent);
+    return true;
+  }
+  recent.push(now);
+  hits.set(ip, recent);
+
+  // Keep the map from growing without bound on a long-lived instance.
+  if (hits.size > 500) {
+    Array.from(hits.entries()).forEach(([key, times]) => {
+      if (times.every((t) => now - t >= RATE_WINDOW)) hits.delete(key);
+    });
+  }
+  return false;
 }
 
-async function sendEmailWithResend(to: string, code: string): Promise<boolean> {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    console.log(`[Contact API] No RESEND_API_KEY set. Code for ${to}: ${code}`);
-    return true; // Graceful fallback — still works without Resend configured
-  }
-
-  try {
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        from: 'Portfolio Contact <onboarding@resend.dev>',
-        to: [to],
-        subject: 'Your verification code',
-        html: `<p>Your verification code is: <strong>${code}</strong></p><p>This code expires in 10 minutes.</p>`,
-      }),
-    });
-    return res.ok;
-  } catch (err) {
-    console.error('[Contact API] Resend error:', err);
-    return false;
-  }
-}
-
-async function sendContactEmail(senderEmail: string, message: string): Promise<boolean> {
-  const apiKey = process.env.RESEND_API_KEY;
-  const contactEmail = process.env.CONTACT_EMAIL;
-
-  if (!apiKey || !contactEmail) {
-    console.log(`[Contact API] Message from ${senderEmail}: ${message}`);
-    return true; // Graceful fallback
-  }
-
-  try {
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        from: 'Portfolio Contact <onboarding@resend.dev>',
-        to: [contactEmail],
-        subject: `New message from ${senderEmail}`,
-        html: `<p><strong>From:</strong> ${senderEmail}</p><p><strong>Message:</strong></p><p>${message}</p>`,
-        reply_to: senderEmail,
-      }),
-    });
-    return res.ok;
-  } catch (err) {
-    console.error('[Contact API] Resend error:', err);
-    return false;
-  }
+// The message is visitor-controlled and lands in an HTML email, so every
+// special character has to be neutralised before interpolation.
+function escapeHtml(input: string): string {
+  return input
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 export async function POST(request: NextRequest) {
-  cleanExpired();
-
   try {
     const body = await request.json();
-    const { action, email, message, code } = body;
+    const email = typeof body.email === 'string' ? body.email.trim() : '';
+    const message = typeof body.message === 'string' ? body.message.trim() : '';
+    // Honeypot: a real person never sees this field, so anything in it is a bot.
+    // Answer 200 so the bot has no signal that it was caught.
+    const honeypot = typeof body.website === 'string' ? body.website : '';
 
-    if (!action || !email) {
-      return NextResponse.json({ error: 'Missing required fields.' }, { status: 400 });
+    if (honeypot) {
+      return NextResponse.json({ success: true, message: 'Message sent.' });
     }
 
-    if (action === 'send-code') {
-      if (!message?.trim()) {
-        return NextResponse.json({ error: 'Message is required.' }, { status: 400 });
-      }
-
-      const verificationCode = generateCode();
-      codeStore.set(email, {
-        code: verificationCode,
-        message: message.trim(),
-        expires: Date.now() + 10 * 60 * 1000, // 10 minutes
-      });
-
-      const sent = await sendEmailWithResend(email, verificationCode);
-      if (!sent) {
-        return NextResponse.json({ error: 'Failed to send verification code.' }, { status: 500 });
-      }
-
-      return NextResponse.json({ success: true, message: 'Verification code sent.' });
+    if (!email || !message) {
+      return NextResponse.json({ error: 'Email and message are both required.' }, { status: 400 });
+    }
+    if (email.length > MAX_EMAIL || !EMAIL_RE.test(email)) {
+      return NextResponse.json({ error: "That email address doesn't look right." }, { status: 400 });
+    }
+    if (message.length > MAX_MESSAGE) {
+      return NextResponse.json(
+        { error: `Message is too long (max ${MAX_MESSAGE} characters).` },
+        { status: 400 },
+      );
     }
 
-    if (action === 'verify') {
-      if (!code?.trim()) {
-        return NextResponse.json({ error: 'Verification code is required.' }, { status: 400 });
-      }
-
-      const stored = codeStore.get(email);
-      if (!stored) {
-        return NextResponse.json({ error: 'No pending verification. Please start over.' }, { status: 400 });
-      }
-
-      if (stored.expires < Date.now()) {
-        codeStore.delete(email);
-        return NextResponse.json({ error: 'Code expired. Please start over.' }, { status: 400 });
-      }
-
-      if (stored.code !== code.trim()) {
-        return NextResponse.json({ error: 'Invalid code. Please try again.' }, { status: 400 });
-      }
-
-      // Code valid — send the actual contact message
-      codeStore.delete(email);
-      const delivered = await sendContactEmail(email, stored.message);
-
-      if (!delivered) {
-        return NextResponse.json({ error: 'Failed to deliver message.' }, { status: 500 });
-      }
-
-      return NextResponse.json({ success: true, message: 'Message delivered.' });
+    const ip =
+      request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+      request.headers.get('x-real-ip') ||
+      'unknown';
+    if (rateLimited(ip)) {
+      return NextResponse.json(
+        { error: 'Too many messages. Please try again later.' },
+        { status: 429 },
+      );
     }
 
-    return NextResponse.json({ error: 'Invalid action.' }, { status: 400 });
-  } catch {
+    const apiKey = process.env.RESEND_API_KEY;
+    const contactEmail = process.env.CONTACT_EMAIL;
+
+    if (!apiKey || !contactEmail) {
+      // Local development without credentials. This path must never run in
+      // production, so it reports the failure instead of faking success.
+      console.warn(
+        `[Contact API] RESEND_API_KEY or CONTACT_EMAIL missing — not sent.\n  from: ${email}\n  message: ${message}`,
+      );
+      return NextResponse.json(
+        { error: 'Email is not configured on the server.' },
+        { status: 503 },
+      );
+    }
+
+    const safeEmail = escapeHtml(email);
+    const safeMessage = escapeHtml(message).replace(/\n/g, '<br />');
+
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        // The address must stay one you control — SPF/DKIM/DMARC exist to stop
+        // anyone sending as someone else. Only the display name carries the
+        // visitor's address, and reply_to makes Reply go to them.
+        from: `${email} via portfolio <onboarding@resend.dev>`,
+        to: [contactEmail],
+        reply_to: email,
+        subject: `Portfolio message from ${email}`,
+        text: `From: ${email}\n\n${message}`,
+        html:
+          `<p><strong>From:</strong> ${safeEmail}</p>` +
+          `<hr /><p>${safeMessage}</p>`,
+      }),
+    });
+
+    if (!res.ok) {
+      const detail = await res.text().catch(() => '');
+      console.error(`[Contact API] Resend responded ${res.status}: ${detail}`);
+      return NextResponse.json(
+        { error: 'Could not send the message. Please try again.' },
+        { status: 502 },
+      );
+    }
+
+    return NextResponse.json({ success: true, message: 'Message sent.' });
+  } catch (err) {
+    console.error('[Contact API]', err);
     return NextResponse.json({ error: 'Internal server error.' }, { status: 500 });
   }
 }

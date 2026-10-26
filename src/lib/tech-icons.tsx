@@ -1,4 +1,8 @@
 import React from 'react';
+import {
+  Coffee, Layers, Wind, Zap, Database, Boxes, Bot, Network, Workflow,
+  Terminal, MousePointer2, Triangle, Server, Send,
+} from 'lucide-react';
 
 export const TECH_ICONS: Record<string, React.ReactNode> = {
   'Python': (
@@ -122,3 +126,41 @@ export const TECH_ICONS: Record<string, React.ReactNode> = {
     </svg>
   ),
 };
+
+// ─── Icons for skills with no brand SVG ──────────────────────────────────────
+//  Deliberately generic marks, tinted to each tool's own colour so every chip
+//  on the globe carries an icon rather than falling back to a plain dot.
+const GENERIC_ICONS: Record<string, React.ReactNode> = {
+  'Java':                   <Coffee         size={20} strokeWidth={2} color="#f89820" />,
+  'Next.js':                <Layers         size={20} strokeWidth={2} color="#ffffff" />,
+  'Tailwind CSS':           <Wind           size={20} strokeWidth={2} color="#38bdf8" />,
+  'FastAPI':                <Zap            size={20} strokeWidth={2} color="#05998b" />,
+  'MySQL':                  <Database       size={20} strokeWidth={2} color="#00758f" />,
+  'ChromaDB':               <Boxes          size={20} strokeWidth={2} color="#ff9800" />,
+  'Agentic AI':             <Bot            size={20} strokeWidth={2} color="#a855f7" />,
+  'LangGraph':              <Network        size={20} strokeWidth={2} color="#10b981" />,
+  'Multi-Agent Workflows':  <Workflow       size={20} strokeWidth={2} color="#c084fc" />,
+  'Vector Databases':       <Boxes          size={20} strokeWidth={2} color="#8b5cf6" />,
+  'Claude Code':            <Terminal       size={20} strokeWidth={2} color="#d97757" />,
+  'Cursor':                 <MousePointer2  size={20} strokeWidth={2} color="#e5e7eb" />,
+  'GitHub Copilot':         <Bot            size={20} strokeWidth={2} color="#e5e7eb" />,
+  'Vercel':                 <Triangle       size={20} strokeWidth={2} color="#ffffff" />,
+  'Render':                 <Server         size={20} strokeWidth={2} color="#46e3b7" />,
+  'Postman':                <Send           size={20} strokeWidth={2} color="#ff6c37" />,
+};
+
+// Lookup is case- and punctuation-insensitive so a skill renamed from
+// "Javascript" to "JavaScript" keeps its brand SVG instead of silently
+// falling back to a dot.
+const normalizeKey = (name: string) => name.toLowerCase().replace(/[^a-z0-9+]/g, '');
+
+const ICON_LOOKUP: Record<string, React.ReactNode> = {};
+Object.entries({ ...TECH_ICONS, ...GENERIC_ICONS }).forEach(([key, node]) => {
+  ICON_LOOKUP[normalizeKey(key)] = node;
+});
+
+// Names whose normalised forms still differ from the icon they should use.
+ICON_LOOKUP[normalizeKey('AWS (EC2)')] = TECH_ICONS['AWS (EC2, ECR)'];
+
+export const getTechIcon = (name: string): React.ReactNode | undefined =>
+  ICON_LOOKUP[normalizeKey(name)];

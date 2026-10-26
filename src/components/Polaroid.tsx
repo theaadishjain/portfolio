@@ -38,7 +38,7 @@ export default function Polaroid() {
         ref={ref}
         style={{ rotateX: x, rotateY: y, z: 100, transformStyle: 'preserve-3d' }}
         className="relative origin-center cursor-pointer"
-        initial={{ rotateZ: 3, y: 50, opacity: 0 }}
+        initial={{ rotateZ: -3, y: 50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
       >
@@ -57,7 +57,7 @@ export default function Polaroid() {
           </div>
 
           <div className="absolute bottom-4 left-0 w-full text-center pointer-events-none">
-            <span className="font-handwriting text-2xl text-[#555]">that&apos;s me —</span>
+            <span className="font-handwriting text-2xl text-[#555]">that&apos;s me</span>
           </div>
         </div>
       </motion.div>

@@ -30,10 +30,10 @@ export default function ExperienceSection() {
       {/* Header Area */}
       <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <div className="font-handwriting text-3xl md:text-4xl text-[#d34b32] -rotate-2 origin-left inline-block mb-8">
-            the logbook —
+          <div className="font-handwriting text-4xl md:text-5xl text-[#d34b32] -rotate-2 origin-left inline-block mb-8">
+            The logbook —
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1a1a1a]/5 border border-[#1a1a1a]/10 text-xs text-[#555] font-medium inline-flex w-fit">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1a1a1a]/5 border border-[#1a1a1a]/10 text-sm text-[#555] font-medium inline-flex w-fit">
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span>currently: {ACTIVE_STATUS.join(' · ')}</span>
           </div>
@@ -106,17 +106,23 @@ export default function ExperienceSection() {
               viewport={{ once: true, margin: '-50px' }}
               className="flex flex-col gap-6 md:gap-8"
             >
+              {filteredData.length === 0 && (
+                <div className="text-gray-500 text-sm italic">
+                  <span className="text-gray-600">~</span> no entries on this track yet.
+                </div>
+              )}
+
               {filteredData.map((item) => (
                 <motion.div key={item.id} variants={itemVariants} className="group">
                   {isRecruiterMode ? (
                     <div>
                       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                        <span className="text-gray-500 shrink-0">[{item.date}]</span>
+                        <span className="text-gray-500 shrink-0 whitespace-nowrap">[{item.date}]</span>
                         <span className="text-[#d34b32]">commit</span>
                         <span className="text-gray-400">-m</span>
                         <span className="text-gray-100 font-semibold break-words">&quot;{item.outcomeLine}&quot;</span>
                       </div>
-                      <div className="pl-4 sm:pl-8 md:pl-[6.5rem] mt-2 text-xs md:text-sm">
+                      <div className="pl-4 sm:pl-8 md:pl-[13.5rem] mt-2 text-xs md:text-sm">
                         <div className="text-emerald-400/80 mb-2 font-medium flex items-start gap-2">
                           <span className="text-gray-600">↳</span> {item.metric}
                         </div>
@@ -132,14 +138,14 @@ export default function ExperienceSection() {
                   ) : (
                     <div>
                       <div className="flex gap-3">
-                        <span className="text-gray-500 shrink-0 hidden sm:block">[{item.date}]</span>
+                        <span className="text-gray-500 shrink-0 hidden sm:block whitespace-nowrap">[{item.date}]</span>
                         <span className="text-blue-400 shrink-0">~</span>
                         <span className="text-gray-300 leading-relaxed text-sm md:text-base group-hover:text-white transition-colors">
-                          <span className="text-gray-500 sm:hidden mr-2">[{item.date}]</span>
+                          <span className="text-gray-500 sm:hidden mr-2 whitespace-nowrap">[{item.date}]</span>
                           {item.narrativeLine}
                         </span>
                       </div>
-                      <div className="pl-6 sm:pl-[6.5rem] mt-3 flex flex-wrap gap-2 text-xs text-gray-500">
+                      <div className="pl-6 sm:pl-[13.5rem] mt-3 flex flex-wrap gap-2 text-xs text-gray-500">
                         {item.stack.map((s) => (
                           <span key={s} className="px-2 py-1 border border-white/10 rounded-md bg-white/5">
                             {s}

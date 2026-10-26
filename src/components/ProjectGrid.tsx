@@ -10,7 +10,7 @@ import ProjectCard from './ProjectCard';
  *
  * total=5 → 3-col grid, 3 rows, no gaps:
  *   [0] 2col 2row  [1] 1col 1row  [2] 1col 1row
- *   [3] 1col 2row  [4] 2col 1row
+ *   [3] 1col 1row  [4] 2col 1row
  *   Row1: [0][0][1]  Row2: [0][0][2]  Row3: [3][4][4]
  *
  * total=3 → 3-col grid, 1 row, uniform:
@@ -25,7 +25,7 @@ function getBentoClass(idx: number, total: number): string {
       0: 'md:col-span-2 md:row-span-2',
       1: 'md:col-span-1 md:row-span-1',
       2: 'md:col-span-1 md:row-span-1',
-      3: 'md:col-span-1 md:row-span-2',
+      3: 'md:col-span-1 md:row-span-1',
       4: 'md:col-span-2 md:row-span-1',
     };
     return spans[idx] ?? 'md:col-span-1 md:row-span-1';
@@ -47,10 +47,10 @@ export default function ProjectGrid() {
   );
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-6 md:px-12 py-20 flex flex-col justify-center">
+    <div className="w-full max-w-6xl mx-auto px-6 md:px-12 pt-28 pb-20 flex flex-col justify-center">
       <div className="mb-12">
-        <div className="font-handwriting text-3xl md:text-4xl text-[#d34b32] -rotate-2 origin-left inline-block mb-8">
-          stuff I built instead of sleeping —
+        <div className="font-handwriting text-4xl md:text-5xl text-[#d34b32] -rotate-2 origin-left inline-block mb-8">
+          Stuff I built instead of sleeping —
         </div>
 
         {/* Filter Tabs */}

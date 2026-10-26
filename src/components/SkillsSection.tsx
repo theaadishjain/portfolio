@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import { SKILLS_DATA } from '@/lib/data';
-import { TECH_ICONS } from '@/lib/tech-icons';
+import { getTechIcon } from '@/lib/tech-icons';
 import { GraduationCap } from 'lucide-react';
 
 const SkillsGlobe = dynamic(() => import('./SkillsGlobe'), { ssr: false });
@@ -12,11 +12,13 @@ const SkillsGlobe = dynamic(() => import('./SkillsGlobe'), { ssr: false });
 // ─── Grid fallback (flat skill cards) ────────────────────────────────────────
 function SkillGrid() {
   const categoryColors: Record<string, string> = {
-    'Languages': '#3b82f6',
-    'Frontend': '#22c55e',
-    'Backend': '#f97316',
-    'DevOps': '#ec4899',
-    'AI/ML': '#a855f7',
+    'Languages':    '#3b82f6',
+    'Frontend':     '#22c55e',
+    'Backend':      '#f97316',
+    'Databases':    '#14b8a6',
+    'AI/ML':        '#a855f7',
+    'AI Dev Tools': '#eab308',
+    'DevOps':       '#ec4899',
   };
 
   const categories = Object.keys(categoryColors);
@@ -53,7 +55,7 @@ function SkillGrid() {
                 >
                   {/* Icon */}
                   <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center bg-white/5 rounded-md p-1 group-hover:scale-110 transition-transform duration-300">
-                    {TECH_ICONS[skill.name] || (
+                    {getTechIcon(skill.name) || (
                        <div className="w-2 h-2 rounded-full" style={{ background: group.color }} />
                     )}
                   </div>
@@ -122,6 +124,7 @@ function ViewToggle({ view, onChange }: { view: 'globe' | 'grid'; onChange: (v: 
 export default function SkillsSection() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [hasBeenVisible, setHasBeenVisible] = useState(false);
   const [hasWebGL, setHasWebGL] = useState(true);
   const [viewMode, setViewMode] = useState<'globe' | 'grid'>('globe');
   const prefersReducedMotion = useReducedMotion();
@@ -138,7 +141,10 @@ export default function SkillsSection() {
     }
 
     const observer = new IntersectionObserver(
-      ([entry]) => setIsVisible(entry.isIntersecting),
+      ([entry]) => {
+        setIsVisible(entry.isIntersecting);
+        if (entry.isIntersecting) setHasBeenVisible(true);
+      },
       { rootMargin: '200px' }
     );
     if (containerRef.current) observer.observe(containerRef.current);
@@ -157,8 +163,8 @@ export default function SkillsSection() {
     <div className="w-full max-w-6xl mx-auto px-6 md:px-12 py-20 flex flex-col justify-center relative" ref={containerRef}>
       {/* Header */}
       <div className="mb-12 z-10 relative">
-        <div className="font-handwriting text-3xl md:text-4xl text-[#d34b32] -rotate-2 origin-left inline-block mb-6">
-          tools of the trade —
+        <div className="font-handwriting text-4xl md:text-5xl text-[#d34b32] -rotate-2 origin-left inline-block mb-6">
+          Tools of the trade —
         </div>
         <p className="text-[#555] max-w-md text-base md:text-lg leading-relaxed font-light">
           Languages, frameworks, and concepts I use to build intelligent systems.
@@ -188,21 +194,39 @@ export default function SkillsSection() {
           <div className="bg-noise absolute inset-0 opacity-[0.15] pointer-events-none z-0" />
 
         {/* Views with crossfade */}
-        <AnimatePresence mode="wait">
-          {activeView === 'globe' ? (
-            <motion.div
-              key="globe"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.35 }}
-              className="absolute inset-0"
-            >
-              {isVisible && (
-                <SkillsGlobe isVisible={isVisible} prefersReducedMotion={prefersReducedMotion} />
-              )}
-            </motion.div>
-          ) : (
+        {/* Globe mounts once and is never torn down — toggling only fades it
+            and pauses its loop, so switching back is instant instead of
+            re-running the whole three.js build. */}
+        {!forceGrid && hasBeenVisible && (
+          <motion.div
+            initial={{ opacity: 0, visibility: 'visible' }}
+            animate={{
+              opacity: activeView === 'globe' ? 1 : 0,
+              // Applied as the fade starts, so fading back in is visible.
+              visibility: 'visible',
+              // Applied once the fade finishes. pointer-events alone is not
+              // enough: the loop sets pointerEvents:'auto' on every marker, and
+              // a child can re-enable what the parent disabled. visibility is
+              // never overridden here, so the hidden globe cannot steal hover
+              // from the grid sitting on top of it.
+              transitionEnd: { visibility: activeView === 'globe' ? 'visible' : 'hidden' },
+            }}
+            transition={{ duration: 0.35 }}
+            className="absolute inset-0"
+            style={{ pointerEvents: activeView === 'globe' ? 'auto' : 'none' }}
+          >
+            <SkillsGlobe
+              isVisible={isVisible && activeView === 'globe'}
+              prefersReducedMotion={prefersReducedMotion}
+            />
+          </motion.div>
+        )}
+
+        {/* Grid cross-fades over the globe. mode="wait" used to hold the
+            incoming view back until the outgoing one had finished, which is
+            what made the toggle feel like it stalled. */}
+        <AnimatePresence>
+          {activeView === 'grid' && (
             <motion.div
               key="grid"
               initial={{ opacity: 0 }}
@@ -231,22 +255,24 @@ export default function SkillsSection() {
             <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-[#3b82f6]" /> Languages</div>
             <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-[#22c55e]" /> Frontend</div>
             <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-[#f97316]" /> Backend</div>
-            <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-[#ec4899]" /> DevOps</div>
+            <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-[#14b8a6]" /> Databases</div>
             <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-[#a855f7]" /> AI/ML</div>
+            <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-[#eab308]" /> AI Dev Tools</div>
+            <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-[#ec4899]" /> DevOps</div>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Certifications badge row */}
       <div className="mt-12 flex flex-col items-start gap-4">
-        <div className="font-handwriting text-2xl md:text-3xl text-[#d34b32] -rotate-2 origin-left inline-block">
-          certified in —
+        <div className="font-handwriting text-3xl md:text-4xl text-[#d34b32] -rotate-2 origin-left inline-block">
+          Certified in —
         </div>
         <div className="flex flex-wrap gap-4">
 
           {/* Microsoft ML Ops Engineer Associate */}
           <a
-            href="https://learn.microsoft.com/en-us/credentials/certifications/azure-ai-engineer/"
+            href="https://learn.microsoft.com/en-us/users/aadishjain-5528/credentials/2dc4a5bbe4abc6a3"
             target="_blank"
             rel="noreferrer"
             title="Microsoft Certified: ML Ops Engineer Associate — click to verify"
@@ -266,12 +292,12 @@ export default function SkillsSection() {
             </span>
           </a>
 
-          {/* GitHub Actions */}
+          {/* GitHub Copilot */}
           <a
-            href="https://www.credly.com/org/github/badge/github-actions"
+            href="https://learn.microsoft.com/en-us/users/aadishjain-4658/credentials/aa08812813372ab3"
             target="_blank"
             rel="noreferrer"
-            title="GitHub Certified: GitHub Actions — click to verify"
+            title="GitHub Certified: GitHub Copilot — click to verify"
             className="inline-flex items-center gap-3 pl-2 pr-5 py-2 rounded-md bg-white border border-black/10 shadow-[0_1px_4px_rgba(0,0,0,0.07),inset_0_1px_0_rgba(255,255,255,0.9)] text-[#1a1a1a] hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 no-underline"
           >
             <span className="flex items-center justify-center w-8 h-8 rounded-md bg-[#1a1a1a] border border-black/20 shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)] flex-shrink-0">
@@ -281,15 +307,12 @@ export default function SkillsSection() {
             </span>
             <span className="flex flex-col leading-tight">
               <span className="text-[10px] font-semibold uppercase tracking-widest text-[#888]">GitHub</span>
-              <span className="text-[13px] font-semibold text-[#1a1a1a]">GitHub Actions</span>
+              <span className="text-[13px] font-semibold text-[#1a1a1a]">GitHub Copilot</span>
             </span>
           </a>
 
           {/* NPTEL Introduction to Machine Learning */}
-          <a
-            href="#"
-            target="_blank"
-            rel="noreferrer"
+          <div
             title="NPTEL Certified: Introduction to Machine Learning"
             className="inline-flex items-center gap-3 pl-2 pr-5 py-2 rounded-md bg-white border border-black/10 shadow-[0_1px_4px_rgba(0,0,0,0.07),inset_0_1px_0_rgba(255,255,255,0.9)] text-[#1a1a1a] hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 no-underline"
           >
@@ -300,7 +323,7 @@ export default function SkillsSection() {
               <span className="text-[10px] font-semibold uppercase tracking-widest text-[#888]">NPTEL</span>
               <span className="text-[13px] font-semibold text-[#1a1a1a]">Introduction to Machine Learning</span>
             </span>
-          </a>
+          </div>
 
         </div>
       </div>

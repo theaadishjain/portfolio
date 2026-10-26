@@ -4,13 +4,17 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, RotateCcw } from 'lucide-react';
 
-type Stage = 'message' | 'email' | 'verify' | 'success';
+type Stage = 'message' | 'email' | 'success';
+
+// Mirrors the server's check so the error shows before a pointless round trip.
+const EMAIL_RE = /^[^\s@<>"'\\]{1,64}@[^\s@<>"'\\.]+(\.[^\s@<>"'\\.]+)+$/;
 
 export default function TerminalContact() {
   const [stage, setStage] = useState<Stage>('message');
   const [message, setMessage] = useState('');
   const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
+  // Honeypot. Hidden from people, so anything here came from a bot.
+  const [website, setWebsite] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState('');
 
@@ -29,35 +33,17 @@ export default function TerminalContact() {
 
       if (stage === 'message' && message.trim()) {
         setStage('email');
-      } else if (stage === 'email' && email.trim() && email.includes('@')) {
+      } else if (stage === 'email' && EMAIL_RE.test(email.trim())) {
         setIsProcessing(true);
         try {
           const res = await fetch('/api/contact', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'send-code', email, message }),
+            body: JSON.stringify({ email, message, website }),
           });
           const data = await res.json();
           if (!res.ok) {
-            setError(data.error || 'Failed to send code.');
-          } else {
-            setStage('verify');
-          }
-        } catch {
-          setError('Network error. Please try again.');
-        }
-        setIsProcessing(false);
-      } else if (stage === 'verify' && code.trim()) {
-        setIsProcessing(true);
-        try {
-          const res = await fetch('/api/contact', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'verify', email, code, message }),
-          });
-          const data = await res.json();
-          if (!res.ok) {
-            setError(data.error || 'Invalid code.');
+            setError(data.error || 'Failed to send message.');
           } else {
             setStage('success');
           }
@@ -65,6 +51,8 @@ export default function TerminalContact() {
           setError('Network error. Please try again.');
         }
         setIsProcessing(false);
+      } else if (stage === 'email') {
+        setError("That email address doesn't look right.");
       }
     }
   };
@@ -72,14 +60,13 @@ export default function TerminalContact() {
   const handleBack = () => {
     setError('');
     if (stage === 'email') setStage('message');
-    if (stage === 'verify') setStage('email');
   };
 
   const handleReset = () => {
     setStage('message');
     setMessage('');
     setEmail('');
-    setCode('');
+    setWebsite('');
     setIsProcessing(false);
     setError('');
   };
@@ -103,8 +90,8 @@ export default function TerminalContact() {
         <h2 className="font-serif text-5xl md:text-6xl font-bold leading-tight tracking-tight mb-6 text-[#1a1a1a]">Say hi.</h2>
         <p className="text-[#555] max-w-md text-center leading-relaxed">
           I like meeting people who make things. Type your message below,
-          confirm your email with the quick code I send back, and your note
-          lands straight in my inbox.
+          leave your email so I can write back, and your note lands straight
+          in my inbox.
         </p>
       </div>
 
@@ -120,7 +107,7 @@ export default function TerminalContact() {
               <div className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
               <div className="w-3 h-3 rounded-full bg-[#27c93f]" />
             </div>
-            <span className="text-gray-500 text-xs tracking-wider">say hi — verified &amp; spam-free</span>
+            <span className="text-gray-500 text-xs tracking-wider">say hi — straight to my inbox</span>
           </div>
 
           <AnimatePresence>
@@ -159,7 +146,7 @@ export default function TerminalContact() {
           </div>
 
           <AnimatePresence>
-            {(stage === 'email' || stage === 'verify' || stage === 'success') && (
+            {(stage === 'email' || stage === 'success') && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -180,9 +167,10 @@ export default function TerminalContact() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
+                role="status"
                 className="text-gray-500 italic"
               >
-                sending code...
+                sending...
               </motion.div>
             )}
           </AnimatePresence>
@@ -193,25 +181,10 @@ export default function TerminalContact() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
+                role="alert"
                 className="text-red-400 text-sm"
               >
                 ✗ {error}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <AnimatePresence>
-            {(stage === 'verify' || stage === 'success') && !isProcessing && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-start gap-2 text-[#e67e22]"
-              >
-                <span className="pt-1">enter code {'>'}</span>
-                <div className="flex-1 break-words tracking-widest">
-                  {code}
-                  {stage === 'verify' && <span className="inline-block w-2 h-[1.1em] bg-[#e67e22] align-middle cursor-blink ml-1" />}
-                </div>
               </motion.div>
             )}
           </AnimatePresence>
@@ -221,6 +194,7 @@ export default function TerminalContact() {
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
+                role="status"
                 className="text-[#27c93f] mt-2 flex items-center gap-2"
               >
                 <span>✓</span> got it — landing in my inbox now.
@@ -228,17 +202,23 @@ export default function TerminalContact() {
             )}
           </AnimatePresence>
 
+          {/* The real field. It is visually hidden because the caret and the
+              typed text are drawn above it, so it needs an explicit label —
+              otherwise assistive tech announces a bare edit box. maxLength
+              mirrors the server's MAX_MESSAGE / MAX_EMAIL so the ceiling is
+              felt while typing rather than as a 400 after submitting. */}
           {stage !== 'success' && (
             <input
               ref={inputRef}
               type={stage === 'email' ? 'email' : 'text'}
+              aria-label={stage === 'email' ? 'Your email address' : 'Your message'}
+              maxLength={stage === 'email' ? 254 : 5000}
               className="absolute opacity-0 top-0 left-0 w-1 h-1 pointer-events-none"
-              value={stage === 'message' ? message : stage === 'email' ? email : code}
+              value={stage === 'message' ? message : email}
               onChange={(e) => {
                 const val = e.target.value;
                 if (stage === 'message') setMessage(val);
                 if (stage === 'email') setEmail(val.trim());
-                if (stage === 'verify') setCode(val.trim());
               }}
               onKeyDown={handleKeyDown}
               disabled={isProcessing}
@@ -246,6 +226,20 @@ export default function TerminalContact() {
               spellCheck={false}
             />
           )}
+
+          {/* Honeypot. Bots fill every field they can parse; people never see
+              this one. aria-hidden + tabIndex -1 keep it away from screen
+              readers and keyboard users, and the name is one bots look for. */}
+          <input
+            type="text"
+            name="website"
+            value={website}
+            onChange={(e) => setWebsite(e.target.value)}
+            className="absolute opacity-0 -z-10 w-px h-px pointer-events-none"
+            tabIndex={-1}
+            autoComplete="off"
+            aria-hidden="true"
+          />
         </motion.div>
       </div>
     </div>

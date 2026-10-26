@@ -22,12 +22,12 @@ export default function HeroSection() {
             transition={{ duration: 0.5 }}
             className="mb-3 pl-1"
           >
-            <span className="font-handwriting text-3xl text-[#d34b32]">hi, I&apos;m —</span>
+            <span className="font-handwriting text-3xl text-[#d34b32]">Hi, I&apos;m —</span>
           </motion.div>
 
           <h1 className="font-serif text-6xl md:text-[5.5rem] font-bold leading-[0.95] tracking-tight mb-6 text-[#1a1a1a]">
             <ScrambleText text="Aadish" className="block" />
-            <ScrambleText text="Jain." className="block" />
+            <ScrambleText text="Jain" className="block" />
           </h1>
 
           <motion.h2
@@ -81,13 +81,13 @@ export default function HeroSection() {
             </a>
 
             {/* Hand drawn accent */}
-            <div className="hidden lg:flex absolute -bottom-12 left-8 text-[#d34b32] font-handwriting text-xl items-center gap-2 -rotate-6 whitespace-nowrap">
+            <div className="hidden lg:flex absolute -bottom-16 left-8 text-[#d34b32] font-handwriting text-2xl items-center gap-2 -rotate-6 whitespace-nowrap">
               <ArrowDownRight size={20} strokeWidth={2} className="-mt-1" />
               p.s. — open to full-time &amp; internship opportunities
             </div>
           </motion.div>
 
-          <div className="flex lg:hidden mt-8 text-[#d34b32] font-handwriting text-xl items-center gap-2">
+          <div className="flex lg:hidden mt-10 text-[#d34b32] font-handwriting text-2xl items-center gap-2">
             p.s. — open to full-time &amp; internship opportunities
           </div>
         </div>
